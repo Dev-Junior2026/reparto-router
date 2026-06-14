@@ -1,6 +1,6 @@
 package com.luispacheco.reparto.service;
 
-public class distanciaService {
+public class DistanciaService {
 
     private static final double RADIO_TIERRA_KM = 6371.0;
 
