@@ -5,7 +5,8 @@ import java.time.LocalTime;
 import com.luispacheco.reparto.model.Parada;
 import com.luispacheco.reparto.model.Ruta;
 import com.luispacheco.reparto.model.ConfiguracionReparto;
-import com.luispacheco.reparto.algorithm.HeuristicaVecino;
+import com.luispacheco.reparto.service.EnrutadorService;
+//import com.luispacheco.reparto.algorithm.HeuristicaVecino;
 import com.luispacheco.reparto.service.HorarioService;
 import java.util.List;
 import java.util.ArrayList;
@@ -35,8 +36,10 @@ public class Main {
         ConfiguracionReparto config = new ConfiguracionReparto(almacen, LocalTime.of(8, 0));
 
 // Ejecutar el algoritmo
-        HeuristicaVecino heuristica = new HeuristicaVecino();
-        Ruta ruta = heuristica.calcular(paradas, config);
+        EnrutadorService enrutadorService = new EnrutadorService();
+        Ruta ruta = enrutadorService.calcularRuta(paradas, config);
+        //HeuristicaVecino heuristica = new HeuristicaVecino();
+        //Ruta ruta = heuristica.calcular(paradas, config);
 
 // Mostrar resultados
         System.out.println("=== RUTA OPTIMIZADA ===");
