@@ -7,8 +7,8 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -37,6 +37,7 @@ public class VentanaPrincipal extends Application {
     private TableView<Parada> tablaParadasIngresadas;
     private ObservableList<Parada> paradasIngresadas;
     private Parada almacenGlobal;
+    private Button btnCalcularRuta;
 
     // Panel derecho: resultados
     private TableView<Parada> tablaParadas;
@@ -58,9 +59,9 @@ public class VentanaPrincipal extends Application {
 
         // --- SPLIT PANE ---
         SplitPane splitPane = new SplitPane(panelIzquierdo, panelDerecho);
-        splitPane.setDividerPositions(0.4);
+        splitPane.setDividerPositions(0.45);
 
-        Scene escena = new Scene(splitPane, 1200, 600);
+        Scene escena = new Scene(splitPane, 1400, 700);
         primaryStage.setTitle("Reparto Router");
         primaryStage.setScene(escena);
         primaryStage.show();
@@ -74,15 +75,17 @@ public class VentanaPrincipal extends Application {
         Label titulo = new Label("Gestión de Paradas");
         titulo.setStyle("-fx-font-size: 14; -fx-font-weight: bold");
 
-        // Formulario para almacén (solo se ingresa una vez)
+        // === FORMULARIO PARA ALMACÉN ===
         Label lblAlmacen = new Label("Almacén (Parada 1)");
         lblAlmacen.setStyle("-fx-font-weight: bold");
 
         TextField txtNombreAlmacen = new TextField();
         txtNombreAlmacen.setPromptText("Ej: Almacén Central");
+        txtNombreAlmacen.setPrefWidth(150);
 
         TextField txtDireccionAlmacen = new TextField();
         txtDireccionAlmacen.setPromptText("Ej: Calle Mayor 1");
+        txtDireccionAlmacen.setPrefWidth(180);
 
         Spinner<Double> spinLatitudAlmacen = new Spinner<>(40.0, 41.0, 40.4168, 0.0001);
         spinLatitudAlmacen.setPrefWidth(100);
@@ -90,72 +93,116 @@ public class VentanaPrincipal extends Application {
         spinLongitudAlmacen.setPrefWidth(100);
 
         Button btnCrearAlmacen = new Button("Crear Almacén");
-        btnCrearAlmacen.setOnAction(e -> crearAlmacen(txtNombreAlmacen.getText(), txtDireccionAlmacen.getText(),
-                spinLatitudAlmacen.getValue(), spinLongitudAlmacen.getValue()));
+        btnCrearAlmacen.setOnAction(e -> crearAlmacen(
+                txtNombreAlmacen.getText(),
+                txtDireccionAlmacen.getText(),
+                spinLatitudAlmacen.getValue(),
+                spinLongitudAlmacen.getValue()
+        ));
 
-        HBox almacenBox = new HBox(5, new Label("Nombre:"), txtNombreAlmacen, new Label("Dir:"), txtDireccionAlmacen,
-                new Label("Lat:"), spinLatitudAlmacen, new Label("Lon:"), spinLongitudAlmacen, btnCrearAlmacen);
-        almacenBox.setStyle("-fx-border-bottom: 1px solid #ccc; -fx-padding: 10");
+        HBox almacenBox = new HBox(8,
+                new Label("Nombre:"), txtNombreAlmacen,
+                new Label("Dir:"), txtDireccionAlmacen,
+                new Label("Lat:"), spinLatitudAlmacen,
+                new Label("Lon:"), spinLongitudAlmacen,
+                btnCrearAlmacen
+        );
+        almacenBox.setStyle("-fx-border-bottom: 2px solid #ccc; -fx-padding: 10");
 
-        // Formulario para clientes
+        // === FORMULARIO PARA CLIENTES ===
         Label lblClientes = new Label("Añadir Clientes");
         lblClientes.setStyle("-fx-font-weight: bold");
 
         txtNombre = new TextField();
         txtNombre.setPromptText("Nombre cliente");
+        txtNombre.setPrefWidth(140);
 
         txtDireccion = new TextField();
         txtDireccion.setPromptText("Dirección");
+        txtDireccion.setPrefWidth(160);
 
         spinLatitud = new Spinner<>(40.0, 41.0, 40.42, 0.0001);
-        spinLatitud.setPrefWidth(90);
+        spinLatitud.setPrefWidth(85);
         spinLongitud = new Spinner<>(-4.0, -3.0, -3.70, 0.0001);
-        spinLongitud.setPrefWidth(90);
+        spinLongitud.setPrefWidth(85);
 
         spinHoraApertura = new Spinner<>(0, 23, 9);
-        spinHoraApertura.setPrefWidth(60);
+        spinHoraApertura.setPrefWidth(55);
         spinMinutoApertura = new Spinner<>(0, 59, 0);
-        spinMinutoApertura.setPrefWidth(60);
+        spinMinutoApertura.setPrefWidth(55);
         spinHoraCierre = new Spinner<>(0, 23, 13);
-        spinHoraCierre.setPrefWidth(60);
+        spinHoraCierre.setPrefWidth(55);
         spinMinutoCierre = new Spinner<>(0, 59, 0);
-        spinMinutoCierre.setPrefWidth(60);
+        spinMinutoCierre.setPrefWidth(55);
 
         Button btnAnadirParada = new Button("Añadir Parada");
         btnAnadirParada.setOnAction(e -> anadirParada());
 
-        HBox formularioBox = new HBox(5,
+        HBox formularioBox = new HBox(5);
+        formularioBox.setSpacing(5);
+        formularioBox.getChildren().addAll(
                 new Label("Nombre:"), txtNombre,
                 new Label("Dir:"), txtDireccion,
                 new Label("Lat:"), spinLatitud,
                 new Label("Lon:"), spinLongitud,
                 new Label("Abre:"), spinHoraApertura, new Label(":"), spinMinutoApertura,
                 new Label("Cierra:"), spinHoraCierre, new Label(":"), spinMinutoCierre,
-                btnAnadirParada);
+                btnAnadirParada
+        );
 
-        // Tabla de paradas ingresadas
+        // === TABLA DE PARADAS INGRESADAS ===
+        Label lblParadasIngresadas = new Label("Paradas ingresadas:");
+        lblParadasIngresadas.setStyle("-fx-font-weight: bold");
+
         tablaParadasIngresadas = new TableView<>();
         tablaParadasIngresadas.setItems(paradasIngresadas);
 
         TableColumn<Parada, String> col1 = new TableColumn<>("Nombre");
         col1.setCellValueFactory(new PropertyValueFactory<>("nombre"));
+        col1.setPrefWidth(140);
 
         TableColumn<Parada, String> col2 = new TableColumn<>("Dirección");
         col2.setCellValueFactory(new PropertyValueFactory<>("direccion"));
+        col2.setPrefWidth(160);
 
-        tablaParadasIngresadas.getColumns().addAll(col1, col2);
-        tablaParadasIngresadas.setPrefHeight(150);
+        // Columna de acción: Eliminar
+        TableColumn<Parada, Void> colEliminar = new TableColumn<>("Acción");
+        colEliminar.setCellFactory(column -> new TableCell<Parada, Void>() {
+            private final Button btn = new Button("Eliminar");
+            {
+                btn.setStyle("-fx-font-size: 10");
+                btn.setOnAction(event -> {
+                    Parada parada = getTableView().getItems().get(getIndex());
+                    paradasIngresadas.remove(parada);
+                });
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : btn);
+            }
+        });
+        colEliminar.setPrefWidth(80);
 
-        Button btnCalcularRuta = new Button("Calcular Ruta");
+        tablaParadasIngresadas.getColumns().addAll(col1, col2, colEliminar);
+        tablaParadasIngresadas.setPrefHeight(180);
+
+        // === BOTÓN CALCULAR RUTA ===
+        btnCalcularRuta = new Button("Calcular Ruta");
         btnCalcularRuta.setPrefWidth(150);
         btnCalcularRuta.setStyle("-fx-font-size: 12; -fx-padding: 8");
+        btnCalcularRuta.setDisable(true);
         btnCalcularRuta.setOnAction(e -> calcularRuta());
 
+        // === AGREGAR TODO AL PANEL ===
         panel.getChildren().addAll(
                 titulo,
+                new Separator(),
                 lblAlmacen, almacenBox,
+                new Separator(),
                 lblClientes, formularioBox,
-                new Label("Paradas ingresadas:"), tablaParadasIngresadas,
+                new Separator(),
+                lblParadasIngresadas, tablaParadasIngresadas,
                 btnCalcularRuta
         );
 
@@ -170,16 +217,16 @@ public class VentanaPrincipal extends Application {
         Label titulo = new Label("Ruta Calculada");
         titulo.setStyle("-fx-font-size: 14; -fx-font-weight: bold");
 
-        // Tabla de resultados
+        // === TABLA DE RESULTADOS ===
         tablaParadas = new TableView<>();
 
         TableColumn<Parada, String> colNombre = new TableColumn<>("Nombre");
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
-        colNombre.setPrefWidth(120);
+        colNombre.setPrefWidth(140);
 
         TableColumn<Parada, String> colDireccion = new TableColumn<>("Dirección");
         colDireccion.setCellValueFactory(new PropertyValueFactory<>("direccion"));
-        colDireccion.setPrefWidth(150);
+        colDireccion.setPrefWidth(180);
 
         TableColumn<Parada, LocalTime> colHoraLlegada = new TableColumn<>("Hora Llegada");
         colHoraLlegada.setCellValueFactory(new PropertyValueFactory<>("horaLlegadaEstimada"));
@@ -190,32 +237,46 @@ public class VentanaPrincipal extends Application {
                 setText(item == null ? "-" : item.toString());
             }
         });
-        colHoraLlegada.setPrefWidth(100);
+        colHoraLlegada.setPrefWidth(120);
 
         tablaParadas.getColumns().addAll(colNombre, colDireccion, colHoraLlegada);
 
-        // Panel de información
+        // === PANEL DE INFORMACIÓN ===
         lblDistancia = new Label("Distancia total: -");
         lblTiempo = new Label("Tiempo total: -");
         lblHoraFin = new Label("Hora fin: -");
 
         HBox panelInfo = new HBox(20);
         panelInfo.setPadding(new Insets(10));
-        panelInfo.setStyle("-fx-border-top: 1px solid #ccc");
+        panelInfo.setStyle("-fx-border-top: 2px solid #ccc");
         panelInfo.getChildren().addAll(lblDistancia, lblTiempo, lblHoraFin);
 
         panel.getChildren().addAll(titulo, tablaParadas, panelInfo);
-        VBox.setVgrow(tablaParadas, javafx.scene.layout.Priority.ALWAYS);
+        VBox.setVgrow(tablaParadas, Priority.ALWAYS);
 
         return panel;
     }
 
     private void crearAlmacen(String nombre, String direccion, double lat, double lon) {
-        if (nombre.isEmpty() || direccion.isEmpty()) {
+        // Validar entrada
+        if (nombre.trim().isEmpty() || direccion.trim().isEmpty()) {
             mostrarAlerta("Error", "Completa nombre y dirección del almacén");
             return;
         }
-        almacenGlobal = new Parada(1, nombre, direccion, lat, lon, LocalTime.of(8, 0), LocalTime.of(20, 0));
+
+        // Validar coordenadas
+        if (lat < 40.0 || lat > 41.0) {
+            mostrarAlerta("Error", "Latitud debe estar entre 40.0 y 41.0");
+            return;
+        }
+        if (lon < -4.0 || lon > -3.0) {
+            mostrarAlerta("Error", "Longitud debe estar entre -4.0 y -3.0");
+            return;
+        }
+
+        almacenGlobal = new Parada(1, nombre, direccion, lat, lon,
+                LocalTime.of(8, 0), LocalTime.of(20, 0));
+        btnCalcularRuta.setDisable(false);
         mostrarAlerta("Éxito", "Almacén creado: " + nombre);
     }
 
@@ -225,26 +286,48 @@ public class VentanaPrincipal extends Application {
             return;
         }
 
-        String nombre = txtNombre.getText();
-        String direccion = txtDireccion.getText();
+        String nombre = txtNombre.getText().trim();
+        String direccion = txtDireccion.getText().trim();
 
-        if (nombre.isEmpty() || direccion.isEmpty()) {
-            mostrarAlerta("Error", "Completa nombre y dirección");
+        if (nombre.isEmpty()) {
+            mostrarAlerta("Error", "Ingresa un nombre para la parada");
+            return;
+        }
+        if (direccion.isEmpty()) {
+            mostrarAlerta("Error", "Ingresa una dirección");
             return;
         }
 
         double lat = spinLatitud.getValue();
         double lon = spinLongitud.getValue();
+
+        // Validar coordenadas (rango Madrid)
+        if (lat < 40.0 || lat > 41.0) {
+            mostrarAlerta("Error", "Latitud debe estar entre 40.0 y 41.0");
+            return;
+        }
+        if (lon < -4.0 || lon > -3.0) {
+            mostrarAlerta("Error", "Longitud debe estar entre -4.0 y -3.0");
+            return;
+        }
+
         int horaApertura = spinHoraApertura.getValue();
         int minutoApertura = spinMinutoApertura.getValue();
         int horaCierre = spinHoraCierre.getValue();
         int minutoCierre = spinMinutoCierre.getValue();
 
+        // Validar que cierre sea después de apertura
+        LocalTime abre = LocalTime.of(horaApertura, minutoApertura);
+        LocalTime cierra = LocalTime.of(horaCierre, minutoCierre);
+        if (cierra.isBefore(abre) || cierra.equals(abre)) {
+            mostrarAlerta("Error", "La hora de cierre debe ser después de apertura");
+            return;
+        }
+
         Parada nueva = new Parada(
-                paradasIngresadas.size() + 2,  // numero = 2, 3, 4... (1 es el almacén)
+                paradasIngresadas.size() + 2,
                 nombre, direccion, lat, lon,
-                LocalTime.of(horaApertura, minutoApertura),
-                LocalTime.of(horaCierre, minutoCierre)
+                abre, cierra
         );
 
         paradasIngresadas.add(nueva);
