@@ -44,6 +44,7 @@ public class VentanaPrincipal extends Application {
     private Label lblDistancia;
     private Label lblTiempo;
     private Label lblHoraFin;
+    private PanelMapa panelMapa;
 
     @Override
     public void start(Stage primaryStage) {
@@ -254,6 +255,17 @@ public class VentanaPrincipal extends Application {
         panel.getChildren().addAll(titulo, tablaParadas, panelInfo);
         VBox.setVgrow(tablaParadas, Priority.ALWAYS);
 
+        // Crear panel de mapa
+        panelMapa = new PanelMapa();
+
+        // SplitPane vertical: tabla arriba, mapa abajo
+        SplitPane splitVertical = new SplitPane(tablaParadas, panelMapa);
+        splitVertical.setOrientation(javafx.geometry.Orientation.VERTICAL);
+        splitVertical.setDividerPositions(0.5);
+
+        //panel.getChildren().addAll(titulo, splitVertical, panelInfo);
+        //VBox.setVgrow(splitVertical, Priority.ALWAYS);
+
         return panel;
     }
 
@@ -374,6 +386,9 @@ public class VentanaPrincipal extends Application {
         lblDistancia.setText(String.format("Distancia total: %.2f km", ruta.getDistanciaTotalKm()));
         lblTiempo.setText("Tiempo total: " + ruta.getTiempoTotalEstimado());
         lblHoraFin.setText("Hora fin: " + ruta.getHoraFinEstimada());
+
+        // Mostrar ruta en el mapa
+        panelMapa.mostrarRuta(ruta.getParadasOrdenadas());
     }
 
     private void mostrarAlerta(String titulo, String mensaje) {
