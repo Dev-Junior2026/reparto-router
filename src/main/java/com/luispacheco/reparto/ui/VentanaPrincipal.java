@@ -25,6 +25,9 @@ public class VentanaPrincipal extends Application {
 
     private EnrutadorService enrutadorService;
     private TableView<Parada> tablaParadas;
+    private javafx.scene.control.Label lblDistancia;
+    private javafx.scene.control.Label lblTiempo;
+    private javafx.scene.control.Label lblHoraFin;
 
     @Override
     public void start(Stage primaryStage) {
@@ -65,10 +68,22 @@ public class VentanaPrincipal extends Application {
         panelBotones.setPadding(new Insets(10));
         panelBotones.getChildren().add(btnCalcular);
 
+        // --- Panel de información ---
+        lblDistancia = new javafx.scene.control.Label("Distancia total: -");
+        lblTiempo = new javafx.scene.control.Label("Tiempo total: -");
+        lblHoraFin = new javafx.scene.control.Label("Hora fin: -");
+
+        HBox panelInfo = new HBox(20);
+        panelInfo.setPadding(new Insets(10));
+        panelInfo.setStyle("-fx-border-top: 1px solid #ccc");
+        panelInfo.getChildren().addAll(lblDistancia, lblTiempo, lblHoraFin);
+
+
         // --- Layout principal ---
         BorderPane raiz = new BorderPane();
         raiz.setTop(panelBotones);
         raiz.setCenter(tablaParadas);
+        raiz.setBottom(panelInfo);
 
         Scene escena = new Scene(raiz, 900, 500);
         primaryStage.setTitle("Reparto Router");
@@ -104,6 +119,11 @@ public class VentanaPrincipal extends Application {
         // Mostrar en tabla
         tablaParadas.getItems().clear();
         tablaParadas.getItems().addAll(ruta.getParadasOrdenadas());
+
+        // Actualizar panel de información
+        lblDistancia.setText(String.format("Distancia total: %.2f km", ruta.getDistanciaTotalKm()));
+        lblTiempo.setText("Tiempo total: " + ruta.getTiempoTotalEstimado());
+        lblHoraFin.setText("Hora fin: " + ruta.getHoraFinEstimada());
     }
 
     public static void main(String[] args) {
