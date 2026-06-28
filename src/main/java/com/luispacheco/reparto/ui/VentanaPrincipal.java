@@ -9,6 +9,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.control.TableCell;
 import javafx.stage.Stage;
 
 import com.luispacheco.reparto.model.Parada;
@@ -45,6 +46,13 @@ public class VentanaPrincipal extends Application {
         // Columna: Hora de llegada
         TableColumn<Parada, LocalTime> colHoraLlegada = new TableColumn<>("Hora Llegada");
         colHoraLlegada.setCellValueFactory(new PropertyValueFactory<>("horaLlegadaEstimada"));
+        colHoraLlegada.setCellFactory(column -> new javafx.scene.control.TableCell<Parada, LocalTime>() {
+            @Override
+            protected void updateItem(LocalTime item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(item == null ? "-" : item.toString());
+            }
+        });
         colHoraLlegada.setPrefWidth(120);
 
         tablaParadas.getColumns().addAll(colNombre, colDireccion, colHoraLlegada);
@@ -62,7 +70,7 @@ public class VentanaPrincipal extends Application {
         raiz.setTop(panelBotones);
         raiz.setCenter(tablaParadas);
 
-        Scene escena = new Scene(raiz, 600, 400);
+        Scene escena = new Scene(raiz, 900, 500);
         primaryStage.setTitle("Reparto Router");
         primaryStage.setScene(escena);
         primaryStage.show();
