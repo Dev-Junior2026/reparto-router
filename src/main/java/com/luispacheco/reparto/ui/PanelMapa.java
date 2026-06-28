@@ -10,7 +10,7 @@ public class PanelMapa extends BorderPane {
 
     private WebView webView;
     private WebEngine webEngine;
-    private static final String API_KEY = "AIzaSyD63SPYPUbr2ShqRmtXnjboaMwnoVQX8V4";  // REEMPLAZAR CON TU CLAVE
+    //private static final String API_KEY = "AIzaSyD63SPYPUbr2ShqRmtXnjboaMwnoVQX8V4";  // REEMPLAZAR CON TU CLAVE
 
     public PanelMapa() {
         webView = new WebView();
@@ -55,57 +55,34 @@ public class PanelMapa extends BorderPane {
         sb.append("<!DOCTYPE html>\n");
         sb.append("<html>\n");
         sb.append("<head>\n");
-        sb.append("    <title>Ruta Calculada</title>\n");
-        sb.append("    <script src='https://maps.googleapis.com/maps/api/js?key=").append(API_KEY).append("'></script>\n");
+        sb.append("    <meta charset='UTF-8'>\n");
+        sb.append("    <title>Ruta</title>\n");
         sb.append("    <style>\n");
-        sb.append("        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }\n");
-        sb.append("        #map { width: 100%; height: 100%; }\n");
-        sb.append("        #info { position: absolute; top: 10px; left: 10px; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 1000; }\n");
+        sb.append("        body { font-family: Arial; margin: 20px; background: #f5f5f5; }\n");
+        sb.append("        h1 { color: #333; }\n");
+        sb.append("        table { border-collapse: collapse; width: 100%; background: white; }\n");
+        sb.append("        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }\n");
+        sb.append("        th { background-color: #4285F4; color: white; }\n");
+        sb.append("        tr:hover { background-color: #f9f9f9; }\n");
         sb.append("    </style>\n");
         sb.append("</head>\n");
         sb.append("<body>\n");
-        sb.append("    <div id='info'><strong>Ruta con ").append(paradas.size()).append(" paradas</strong></div>\n");
-        sb.append("    <div id='map'></div>\n");
-        sb.append("    <script>\n");
-        sb.append("        var paradas = [\n");
+        sb.append("    <h1>Ruta Calculada - ").append(paradas.size()).append(" Paradas</h1>\n");
+        sb.append("    <table>\n");
+        sb.append("        <tr><th>Orden</th><th>Nombre</th><th>Latitud</th><th>Longitud</th></tr>\n");
 
-        // Añadir paradas como marcadores
         for (int i = 0; i < paradas.size(); i++) {
             Parada p = paradas.get(i);
-            sb.append("            {lat: ").append(p.getLatitud()).append(", lng: ").append(p.getLongitud())
-                    .append(", nombre: '").append(p.getNombre()).append("', orden: ").append(i).append("}\n");
-            if (i < paradas.size() - 1) sb.append("            ,");
+            sb.append("        <tr>\n");
+            sb.append("            <td>").append(i).append("</td>\n");
+            sb.append("            <td>").append(p.getNombre()).append("</td>\n");
+            sb.append("            <td>").append(String.format("%.4f", p.getLatitud())).append("</td>\n");
+            sb.append("            <td>").append(String.format("%.4f", p.getLongitud())).append("</td>\n");
+            sb.append("        </tr>\n");
         }
 
-        sb.append("        ];\n");
-        sb.append("        var centerLat = paradas[0].lat;\n");
-        sb.append("        var centerLng = paradas[0].lng;\n");
-        sb.append("        var map = new google.maps.Map(document.getElementById('map'), {\n");
-        sb.append("            zoom: 12,\n");
-        sb.append("            center: {lat: centerLat, lng: centerLng}\n");
-        sb.append("        });\n");
-
-        // Marcadores
-        sb.append("        paradas.forEach(function(p, i) {\n");
-        sb.append("            new google.maps.Marker({\n");
-        sb.append("                position: {lat: p.lat, lng: p.lng},\n");
-        sb.append("                map: map,\n");
-        sb.append("                title: p.nombre,\n");
-        sb.append("                label: String(i)\n");
-        sb.append("            });\n");
-        sb.append("        });\n");
-
-        // Línea de ruta
-        sb.append("        var path = paradas.map(p => ({lat: p.lat, lng: p.lng}));\n");
-        sb.append("        new google.maps.Polyline({\n");
-        sb.append("            path: path,\n");
-        sb.append("            geodesic: true,\n");
-        sb.append("            strokeColor: '#4285F4',\n");
-        sb.append("            strokeOpacity: 0.7,\n");
-        sb.append("            strokeWeight: 3,\n");
-        sb.append("            map: map\n");
-        sb.append("        });\n");
-        sb.append("    </script>\n");
+        sb.append("    </table>\n");
+        sb.append("    <p style='margin-top: 20px; color: #666;'><em>Nota: Para un mapa interactivo, se recomienda usar OpenStreetMap desde navegador externo.</em></p>\n");
         sb.append("</body>\n");
         sb.append("</html>\n");
 
