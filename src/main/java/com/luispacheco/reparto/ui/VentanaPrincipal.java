@@ -17,6 +17,8 @@ import com.luispacheco.reparto.model.Ruta;
 import com.luispacheco.reparto.model.ConfiguracionReparto;
 import com.luispacheco.reparto.service.EnrutadorService;
 
+import java.awt.Desktop;
+import java.net.URI;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,13 +46,17 @@ public class VentanaPrincipal extends Application {
     private Label lblDistancia;
     private Label lblTiempo;
     private Label lblHoraFin;
-    private PanelMapa panelMapa;
+    private Button btnVerEnMapa;
+
+    // Última ruta calculada (para el botón Ver en mapa)
+    private List<Parada> ultimaRuta;
 
     @Override
     public void start(Stage primaryStage) {
         enrutadorService = new EnrutadorService();
         paradasIngresadas = FXCollections.observableArrayList();
         almacenGlobal = null;
+        ultimaRuta = new ArrayList<>();
 
         // --- PANEL IZQUIERDO: Entrada de paradas ---
         VBox panelIzquierdo = crearPanelEntrada();
@@ -241,6 +247,14 @@ public class VentanaPrincipal extends Application {
         colHoraLlegada.setPrefWidth(120);
 
         tablaParadas.getColumns().addAll(colNombre, colDireccion, colHoraLlegada);
+        VBox.setVgrow(tablaParadas, Priority.ALWAYS);
+
+        // === BOTÓN VER EN MAPA ===
+        btnVerEnMapa = new Button("🗺 Ver en mapa (OpenStreetMap)");
+        btnVerEnMapa.setPrefWidth(250);
+        btnVerEnMapa.setStyle("-fx-font-size: 12; -fx-padding: 8; -fx-background-color: #4CAF50; -fx-text-fill: white;");
+        btnVerEnMapa.setDisable(true); // Se activa tras calcular la ruta
+        btnVerEnMapa.setOnAction(e -> abrirEnMapa());
 
         // === PANEL DE INFORMACIÓN ===
         lblDistancia = new Label("Distancia total: -");
@@ -252,31 +266,17 @@ public class VentanaPrincipal extends Application {
         panelInfo.setStyle("-fx-border-top: 2px solid #ccc");
         panelInfo.getChildren().addAll(lblDistancia, lblTiempo, lblHoraFin);
 
-        panel.getChildren().addAll(titulo, tablaParadas, panelInfo);
-        VBox.setVgrow(tablaParadas, Priority.ALWAYS);
-
-        // Crear panel de mapa
-        panelMapa = new PanelMapa();
-
-        // SplitPane vertical: tabla arriba, mapa abajo
-        SplitPane splitVertical = new SplitPane(tablaParadas, panelMapa);
-        splitVertical.setOrientation(javafx.geometry.Orientation.VERTICAL);
-        splitVertical.setDividerPositions(0.5);
-
-        //panel.getChildren().addAll(titulo, splitVertical, panelInfo);
-        //VBox.setVgrow(splitVertical, Priority.ALWAYS);
+        panel.getChildren().addAll(titulo, tablaParadas, btnVerEnMapa, panelInfo);
 
         return panel;
     }
 
     private void crearAlmacen(String nombre, String direccion, double lat, double lon) {
-        // Validar entrada
         if (nombre.trim().isEmpty() || direccion.trim().isEmpty()) {
             mostrarAlerta("Error", "Completa nombre y dirección del almacén");
             return;
         }
 
-        // Validar coordenadas
         if (lat < 40.0 || lat > 41.0) {
             mostrarAlerta("Error", "Latitud debe estar entre 40.0 y 41.0");
             return;
@@ -313,7 +313,6 @@ public class VentanaPrincipal extends Application {
         double lat = spinLatitud.getValue();
         double lon = spinLongitud.getValue();
 
-        // Validar coordenadas (rango Madrid)
         if (lat < 40.0 || lat > 41.0) {
             mostrarAlerta("Error", "Latitud debe estar entre 40.0 y 41.0");
             return;
@@ -328,7 +327,6 @@ public class VentanaPrincipal extends Application {
         int horaCierre = spinHoraCierre.getValue();
         int minutoCierre = spinMinutoCierre.getValue();
 
-        // Validar que cierre sea después de apertura
         LocalTime abre = LocalTime.of(horaApertura, minutoApertura);
         LocalTime cierra = LocalTime.of(horaCierre, minutoCierre);
         if (cierra.isBefore(abre) || cierra.equals(abre)) {
@@ -368,27 +366,69 @@ public class VentanaPrincipal extends Application {
             return;
         }
 
-        // Construir lista de paradas con el almacén al principio
         List<Parada> todasLasParadas = new ArrayList<>();
         todasLasParadas.add(almacenGlobal);
         todasLasParadas.addAll(paradasIngresadas);
 
         ConfiguracionReparto config = new ConfiguracionReparto(almacenGlobal, LocalTime.of(8, 0));
 
-        // Ejecutar algoritmo
         Ruta ruta = enrutadorService.calcularRuta(todasLasParadas, config);
 
         // Mostrar en tabla
         tablaParadas.getItems().clear();
         tablaParadas.getItems().addAll(ruta.getParadasOrdenadas());
 
+        // Guardar ruta para el botón de mapa
+        ultimaRuta = new ArrayList<>(ruta.getParadasOrdenadas());
+
         // Actualizar panel de información
         lblDistancia.setText(String.format("Distancia total: %.2f km", ruta.getDistanciaTotalKm()));
         lblTiempo.setText("Tiempo total: " + ruta.getTiempoTotalEstimado());
         lblHoraFin.setText("Hora fin: " + ruta.getHoraFinEstimada());
 
-        // Mostrar ruta en el mapa
-        panelMapa.mostrarRuta(ruta.getParadasOrdenadas());
+        // Activar botón de mapa
+        btnVerEnMapa.setDisable(false);
+    }
+
+    /**
+     * Construye una URL de OpenStreetMap con todas las paradas como waypoints
+     * y la abre en el navegador predeterminado del sistema.
+     *
+     * Formato URL: https://www.openstreetmap.org/directions?engine=fossgis_osrm_car
+     *   &route=lat1,lon1;lat2,lon2;...
+     */
+    private void abrirEnMapa() {
+        if (ultimaRuta == null || ultimaRuta.isEmpty()) {
+            mostrarAlerta("Error", "No hay ruta calculada");
+            return;
+        }
+
+        try {
+            // Construir la cadena de waypoints: lat,lon;lat,lon;...
+            StringBuilder waypoints = new StringBuilder();
+            for (int i = 0; i < ultimaRuta.size(); i++) {
+                Parada p = ultimaRuta.get(i);
+                if (i > 0) waypoints.append(";");
+                waypoints.append(p.getLatitud()).append(",").append(p.getLongitud());
+            }
+
+            // Añadir el almacén al final para cerrar el ciclo de reparto
+            Parada inicio = ultimaRuta.get(0);
+            waypoints.append(";").append(inicio.getLatitud()).append(",").append(inicio.getLongitud());
+
+            String url = "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route="
+                    + waypoints.toString();
+
+            // Abrir en el navegador del sistema
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(new URI(url));
+            } else {
+                mostrarAlerta("Error", "Tu sistema no soporta abrir el navegador automáticamente.\n\nCopia esta URL:\n" + url);
+            }
+
+        } catch (Exception ex) {
+            mostrarAlerta("Error", "No se pudo abrir el mapa: " + ex.getMessage());
+        }
     }
 
     private void mostrarAlerta(String titulo, String mensaje) {
