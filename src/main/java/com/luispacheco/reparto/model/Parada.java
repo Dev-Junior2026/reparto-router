@@ -3,101 +3,100 @@ package com.luispacheco.reparto.model;
 import java.time.LocalTime;
 
 public class Parada {
-    private int numero; // 1 = almacen, 2..N = entregas
+    private int numero;
     private String nombre;
-    private String direccion;
+    private String calle;
+    private String codigoPostal;
+    private String poblacion;
     private double latitud;
     private double longitud;
-    private LocalTime horaApertura; // hora minima de entrega
-    private LocalTime horaCierre; // hora limite de entrega
-    private int tiempoDescargaMin; // por defecto 15 minutos
-    private boolean esAlmacen; // true solo para parada 1
-    private LocalTime horaLlegadaEstimada; // se calcula al enrutar
+    private LocalTime horaApertura;
+    private LocalTime horaCierre;
+    private int tiempoDescargaMin;
+    private boolean esAlmacen;
+    private LocalTime horaLlegadaEstimada;
 
-    public Parada(int numero, String nombre, String direccion, double latitud, double longitud,
-                  LocalTime horaApertura, LocalTime horaCierre) {
-        // El constructor tiene el mismo nombre que la clase
-        // This se refiere a un objeto en concreto
+    /**
+     * Constructor principal. lat/lon se inicializan a 0.0 y se asignan
+     * después mediante setLatitud/setLongitud tras la geocodificación.
+     */
+
+    public Parada(int numero, String nombre, String calle, String codigoPostal,
+                  String poblacion, LocalTime horaApertura, LocalTime horaCierre) {
         this.numero = numero;
         this.nombre = nombre;
-        this.direccion = direccion;
-        this.latitud = latitud;
-        this.longitud = longitud;
+        this.calle = calle;
+        this.codigoPostal = codigoPostal;
+        this.poblacion = poblacion;
+        this.latitud = 0.0;
+        this.longitud = 0.0;
         this.horaApertura = horaApertura;
         this.horaCierre = horaCierre;
-        this.tiempoDescargaMin = 15;           // valor por defecto
-        this.esAlmacen = (numero == 1);        // se calcula solo
-        this.horaLlegadaEstimada = null;       // aun no se conoce
+        this.tiempoDescargaMin = 15;
+        this.esAlmacen = (numero == 1);
+        this.horaLlegadaEstimada = null;
     }
 
-    public int getNumero() {
-        return numero;
-    }
 
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
+    public Parada(int numero, String nombre, String calle, String codigoPostal,
+                  String poblacion, double lat, double lon,
+                  LocalTime abre, LocalTime cierra) {
+        this.numero = numero;
         this.nombre = nombre;
+        this.calle = calle;
+        this.codigoPostal = codigoPostal;
+        this.poblacion = poblacion;
+        this.latitud = lat;
+        this.longitud = lon;
+        this.horaApertura = abre;
+        this.horaCierre = cierra;
+        this.tiempoDescargaMin = 15;
+        this.esAlmacen = (numero == 1);
+        this.horaLlegadaEstimada = null;
     }
 
+    /**
+     * Devuelve la dirección completa formateada:
+     * "Calle Calidad, 68 28906 Getafe"
+     */
     public String getDireccion() {
-        return direccion;
+        return calle + " " + codigoPostal + " " + poblacion;
     }
 
-    public void setDireccion(String direccion) {
-        this.direccion = direccion;
-    }
+    // ── Getters y Setters ─────────────────────────────────────────────────────
 
-    public double getLatitud() {
-        return latitud;
-    }
+    public int getNumero() { return numero; }
 
-    public void setLatitud(double latitud) {
-        this.latitud = latitud;
-    }
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
 
-    public double getLongitud() {
-        return longitud;
-    }
+    public String getCalle() { return calle; }
+    public void setCalle(String calle) { this.calle = calle; }
 
-    public void setLongitud(double longitud) {
-        this.longitud = longitud;
-    }
+    public String getCodigoPostal() { return codigoPostal; }
+    public void setCodigoPostal(String codigoPostal) { this.codigoPostal = codigoPostal; }
 
-    public LocalTime getHoraApertura() {
-        return horaApertura;
-    }
+    public String getPoblacion() { return poblacion; }
+    public void setPoblacion(String poblacion) { this.poblacion = poblacion; }
 
-    public void setHoraApertura(LocalTime horaApertura) {
-        this.horaApertura = horaApertura;
-    }
+    public double getLatitud() { return latitud; }
+    public void setLatitud(double latitud) { this.latitud = latitud; }
 
-    public LocalTime getHoraCierre() {
-        return horaCierre;
-    }
+    public double getLongitud() { return longitud; }
+    public void setLongitud(double longitud) { this.longitud = longitud; }
 
-    public void setHoraCierre(LocalTime horaCierre) {
-        this.horaCierre = horaCierre;
-    }
+    public LocalTime getHoraApertura() { return horaApertura; }
+    public void setHoraApertura(LocalTime horaApertura) { this.horaApertura = horaApertura; }
 
-    public int getTiempoDescargaMin() {
-        return tiempoDescargaMin;
-    }
+    public LocalTime getHoraCierre() { return horaCierre; }
+    public void setHoraCierre(LocalTime horaCierre) { this.horaCierre = horaCierre; }
 
-    public void setTiempoDescargaMin(int tiempoDescargaMin) {
-        this.tiempoDescargaMin = tiempoDescargaMin;
-    }
+    public int getTiempoDescargaMin() { return tiempoDescargaMin; }
+    public void setTiempoDescargaMin(int tiempoDescargaMin) { this.tiempoDescargaMin = tiempoDescargaMin; }
 
-    public boolean isEsAlmacen() {
-        return esAlmacen;
-    }
+    public boolean isEsAlmacen() { return esAlmacen; }
 
-    public LocalTime getHoraLlegadaEstimada() {
-        return horaLlegadaEstimada;
-    }
-
+    public LocalTime getHoraLlegadaEstimada() { return horaLlegadaEstimada; }
     public void setHoraLlegadaEstimada(LocalTime horaLlegadaEstimada) {
         this.horaLlegadaEstimada = horaLlegadaEstimada;
     }
