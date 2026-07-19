@@ -1,5 +1,7 @@
 package com.luispacheco.reparto.ui;
 
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -70,6 +72,9 @@ public class VentanaPrincipal extends Application {
     // Última ruta calculada (para el botón Ver en mapa)
     private List<Parada> ultimaRuta;
 
+    private HttpServer servidorMapa;
+    private int puertoMapa;
+
     @Override
     public void start(Stage primaryStage) {
         enrutadorService = new EnrutadorService();
@@ -78,6 +83,7 @@ public class VentanaPrincipal extends Application {
         almacenGlobal = null;
         ultimaRuta = new ArrayList<>();
         paradaActualIndex = -1;
+        iniciarServidorMapa();
 
         VBox panelIzquierdo = crearPanelEntrada();
         VBox panelDerecho = crearPanelResultados();
@@ -89,6 +95,38 @@ public class VentanaPrincipal extends Application {
         primaryStage.setTitle("Reparto Router");
         primaryStage.setScene(escena);
         primaryStage.show();
+    }
+
+    @Override
+    public void stop() {
+        if (servidorMapa != null) {
+            servidorMapa.stop(0);
+        }
+    }
+
+    private void iniciarServidorMapa() {
+        try {
+            servidorMapa = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+            servidorMapa.start();
+            puertoMapa = servidorMapa.getAddress().getPort();
+            registrarContextoMapa();
+        } catch (Exception ex) {
+            mostrarAlerta("Error", "No se pudo iniciar el servidor del mapa: " + ex.getMessage());
+        }
+    }
+
+    private void registrarContextoMapa() {
+        servidorMapa.createContext("/mapa", exchange -> {
+            String html = generarHtmlLeaflet(paradaActualIndex);
+            byte[] bytes = html.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+            exchange.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
+            exchange.sendResponseHeaders(200, bytes.length);
+
+            try (var os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
+        });
     }
 
     private VBox crearPanelEntrada() {
@@ -482,16 +520,14 @@ public class VentanaPrincipal extends Application {
 
     private void abrirMapaLeaflet(int paradaActiva) {
         try {
-            Path tempFile = Files.createTempFile("reparto_mapa_", ".html");
-            Files.writeString(tempFile, generarHtmlLeaflet(paradaActiva));
-            tempFile.toFile().deleteOnExit();
+            String url = "http://localhost:" + puertoMapa + "/mapa";
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                Desktop.getDesktop().browse(tempFile.toUri());
+                Desktop.getDesktop().browse(new URI(url));
             } else {
-                mostrarAlerta("Info", "Mapa guardado en:\n" + tempFile);
+                mostrarAlerta("Info", "Abre esta URL en tu navegador:\n" + url);
             }
         } catch (Exception ex) {
-            mostrarAlerta("Error", "No se pudo generar el mapa: " + ex.getMessage());
+            mostrarAlerta("Error", "No se pudo abrir el mapa: " + ex.getMessage());
         }
     }
 
