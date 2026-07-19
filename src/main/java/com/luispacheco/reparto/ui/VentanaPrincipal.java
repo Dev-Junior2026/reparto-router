@@ -1,7 +1,10 @@
 package com.luispacheco.reparto.ui;
 
 import com.sun.net.httpserver.HttpServer;
+
 import java.net.InetSocketAddress;
+import java.net.URI;
+
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -13,18 +16,29 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.concurrent.Task;
+import javafx.stage.FileChooser;
+import javafx.scene.control.ProgressBar;
+import javafx.geometry.Pos;
+import javafx.stage.StageStyle;
+import javafx.stage.Modality;
 
 import com.luispacheco.reparto.model.Parada;
 import com.luispacheco.reparto.model.Ruta;
 import com.luispacheco.reparto.model.ConfiguracionReparto;
 import com.luispacheco.reparto.service.EnrutadorService;
 import com.luispacheco.reparto.service.GeocodificacionService;
+import com.luispacheco.reparto.model.FilaImportada;
+import com.luispacheco.reparto.service.ImportadorPdfService;
 
 import java.awt.Desktop;
-import java.net.URI;
+
 import java.time.LocalTime;
+
 import java.util.ArrayList;
 import java.util.List;
+
+import java.io.File;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +47,8 @@ public class VentanaPrincipal extends Application {
 
     private EnrutadorService enrutadorService;
     private GeocodificacionService geocodificacionService;
+    private Stage primaryStage;
+    private ImportadorPdfService importadorPdfService;
 
     // Panel izquierdo: entrada de paradas
     private TextField txtNombre;
@@ -47,6 +63,9 @@ public class VentanaPrincipal extends Application {
     private ObservableList<Parada> paradasIngresadas;
     private Parada almacenGlobal;
     private Button btnCalcularRuta;
+    private Button btnAnadirParada;
+    private Button btnCrearAlmacen;
+    private Button btnImportarPdf;
 
     // Almacén
     private TextField txtNombreAlmacen;
@@ -77,8 +96,10 @@ public class VentanaPrincipal extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        this.primaryStage = primaryStage;
         enrutadorService = new EnrutadorService();
         geocodificacionService = new GeocodificacionService();
+        importadorPdfService = new ImportadorPdfService();
         paradasIngresadas = FXCollections.observableArrayList();
         almacenGlobal = null;
         ultimaRuta = new ArrayList<>();
@@ -161,7 +182,7 @@ public class VentanaPrincipal extends Application {
         spinMinutoInicioRuta = new Spinner<>(0, 59, 0);
         spinMinutoInicioRuta.setPrefWidth(55);
 
-        Button btnCrearAlmacen = new Button("Crear Almac\u00e9n");
+        btnCrearAlmacen = new Button("Crear Almac\u00e9n");
         btnCrearAlmacen.setOnAction(e -> crearAlmacen());
 
         HBox almacenBox = new HBox(6);
@@ -204,7 +225,7 @@ public class VentanaPrincipal extends Application {
         spinMinutoCierre = new Spinner<>(0, 59, 0);
         spinMinutoCierre.setPrefWidth(50);
 
-        Button btnAnadirParada = new Button("A\u00f1adir Parada");
+        btnAnadirParada = new Button("A\u00f1adir Parada");
         btnAnadirParada.setOnAction(e -> anadirParada());
 
         HBox formularioBox = new HBox(5);
@@ -219,6 +240,11 @@ public class VentanaPrincipal extends Application {
         );
 
         // === TABLA DE PARADAS INGRESADAS ===
+
+        btnImportarPdf = new Button("\uD83D\uDCC4 Importar desde PDF");
+        btnImportarPdf.setStyle("-fx-font-size: 12; -fx-padding: 8; -fx-background-color: #9b59b6; -fx-text-fill: white;");
+        btnImportarPdf.setOnAction(e -> importarDesdePdf());
+
         Label lblParadasIngresadas = new Label("Paradas ingresadas:");
         lblParadasIngresadas.setStyle("-fx-font-weight: bold");
 
@@ -230,8 +256,16 @@ public class VentanaPrincipal extends Application {
         col1.setPrefWidth(130);
 
         TableColumn<Parada, String> col2 = new TableColumn<>("Direcci\u00f3n");
-        col2.setCellValueFactory(new PropertyValueFactory<>("direccion"));
+        col2.setCellValueFactory(new PropertyValueFactory<>("calle"));
         col2.setPrefWidth(200);
+
+        TableColumn<Parada, String> colCP = new TableColumn<>("C.P.");
+        colCP.setCellValueFactory(new PropertyValueFactory<>("codigoPostal"));
+        colCP.setPrefWidth(60);
+
+        TableColumn<Parada, String> colPoblacion = new TableColumn<>("Poblaci\u00f3n");
+        colPoblacion.setCellValueFactory(new PropertyValueFactory<>("poblacion"));
+        colPoblacion.setPrefWidth(100);
 
         TableColumn<Parada, String> colHorario = new TableColumn<>("Horario");
         colHorario.setCellValueFactory(cellData -> {
@@ -261,7 +295,7 @@ public class VentanaPrincipal extends Application {
         });
         colEliminar.setPrefWidth(70);
 
-        tablaParadasIngresadas.getColumns().addAll(col1, col2, colHorario, colEliminar);
+        tablaParadasIngresadas.getColumns().addAll(col1, col2, colCP, colPoblacion, colHorario, colEliminar);
         tablaParadasIngresadas.setPrefHeight(180);
 
         // === BOTÓN CALCULAR RUTA ===
@@ -278,6 +312,7 @@ public class VentanaPrincipal extends Application {
                 new Separator(),
                 lblClientes, formularioBox,
                 new Separator(),
+                btnImportarPdf,
                 lblParadasIngresadas, tablaParadasIngresadas,
                 btnCalcularRuta
         );
@@ -396,20 +431,164 @@ public class VentanaPrincipal extends Application {
         }
 
         String direccionCompleta = calle + ", " + cp + " " + poblacion;
-        double[] coords = geocodificacionService.geocodificar(direccionCompleta);
 
-        if (coords == null) {
-            mostrarAlerta("Error", "No se pudo geocodificar la direcci\u00f3n. Verifica que sea correcta.");
-            return;
-        }
+        btnCrearAlmacen.setDisable(true);
 
-        almacenGlobal = new Parada(1, nombre, calle, cp, poblacion,
-                LocalTime.of(8, 0), LocalTime.of(20, 0));
-        almacenGlobal.setLatitud(coords[0]);
-        almacenGlobal.setLongitud(coords[1]);
+        Task<double[]> tareaGeocoding = new Task<>() {
+            @Override
+            protected double[] call() {
+                return geocodificacionService.geocodificar(direccionCompleta);
+            }
+        };
 
-        btnCalcularRuta.setDisable(false);
-        mostrarAlerta("\u00c9xito", "Almac\u00e9n creado: " + nombre);
+        tareaGeocoding.setOnSucceeded(event -> {
+            btnCrearAlmacen.setDisable(false);
+            double[] coords = tareaGeocoding.getValue();
+
+            if (coords == null) {
+                mostrarAlerta("Error", "No se pudo geocodificar la direcci\u00f3n. Verifica que sea correcta.");
+                return;
+            }
+
+            almacenGlobal = new Parada(1, nombre, calle, cp, poblacion,
+                    LocalTime.of(8, 0), LocalTime.of(20, 0));
+            almacenGlobal.setLatitud(coords[0]);
+            almacenGlobal.setLongitud(coords[1]);
+
+            btnCalcularRuta.setDisable(false);
+            mostrarAlerta("\u00c9xito", "Almac\u00e9n creado: " + nombre);
+        });
+
+        tareaGeocoding.setOnFailed(event -> {
+            btnCrearAlmacen.setDisable(false);
+            mostrarAlerta("Error", "Fallo al geocodificar: " + tareaGeocoding.getException().getMessage());
+        });
+
+        Thread hilo = new Thread(tareaGeocoding);
+        hilo.setDaemon(true);
+        hilo.start();
+    }
+
+    private void importarDesdePdf() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Selecciona el PDF de reparto");
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Archivos PDF", "*.pdf"));
+
+        File archivo = fileChooser.showOpenDialog(primaryStage);
+        if (archivo == null) return; // el usuario cancel\u00f3 el di\u00e1logo
+
+        btnImportarPdf.setDisable(true);
+
+        Task<List<FilaImportada>> tareaImportar = new Task<>() {
+            @Override
+            protected List<FilaImportada> call() throws Exception {
+                return importadorPdfService.extraerFilas(archivo);
+            }
+        };
+
+        tareaImportar.setOnSucceeded(event -> {
+
+            List<FilaImportada> filas = tareaImportar.getValue();
+
+            if (filas.isEmpty()) {
+                btnImportarPdf.setDisable(false);
+                mostrarAlerta("Aviso", "No se encontraron filas v\u00e1lidas en el PDF.");
+                return;
+            }
+
+            List<FilaImportada> filasConfirmadas = VentanaPrevisualizacionPdf.mostrar(primaryStage, filas);
+
+            if (filasConfirmadas.isEmpty()) {
+                btnImportarPdf.setDisable(false);
+                mostrarAlerta("Info", "Importaci\u00f3n cancelada, no se a\u00f1adi\u00f3 ninguna parada.");
+                return;
+            }
+
+            geocodificarYAnadirLote(filasConfirmadas);
+        });
+
+        Thread hilo = new Thread(tareaImportar);
+        hilo.setDaemon(true);
+        hilo.start();
+    }
+
+    private void geocodificarYAnadirLote(List<FilaImportada> filasConfirmadas) {
+
+        Task<List<FilaGeocodificada>> tareaLote = new Task<>() {
+            @Override
+            protected List<FilaGeocodificada> call() {
+                List<FilaGeocodificada> resultado = new ArrayList<>();
+                int total = filasConfirmadas.size();
+
+                for (int i = 0; i < total; i++) {
+                    FilaImportada f = filasConfirmadas.get(i);
+                    updateMessage("Geocodificando " + (i + 1) + " de " + total + ": " + f.getNombre());
+                    updateProgress(i, total);
+
+                    String direccionCompleta = f.getCalle() + ", " + f.getCodigoPostal() + " " + f.getPoblacion();
+                    double[] coords = geocodificacionService.geocodificar(direccionCompleta);
+                    resultado.add(new FilaGeocodificada(f, coords));
+
+                    if (i < total - 1) {
+                        try {
+                            Thread.sleep(1100); // respeta el límite de 1 petición/seg de Nominatim
+                        } catch (InterruptedException ignored) {
+                        }
+                    }
+                }
+                updateProgress(total, total);
+                return resultado;
+            }
+        };
+
+        Stage dialogoProgreso = crearDialogoProgreso(tareaLote);
+
+        tareaLote.setOnSucceeded(event -> {
+            dialogoProgreso.close();
+            btnImportarPdf.setDisable(false);
+
+            List<FilaGeocodificada> resultados = tareaLote.getValue();
+            List<String> fallidas = new ArrayList<>();
+            int anadidas = 0;
+
+            for (FilaGeocodificada r : resultados) {
+                if (r.coords == null) {
+                    fallidas.add(r.fila.getNombre());
+                    continue;
+                }
+                Parada nueva = new Parada(
+                        paradasIngresadas.size() + 2,
+                        r.fila.getNombre(), r.fila.getCalle(),
+                        r.fila.getCodigoPostal(), r.fila.getPoblacion(),
+                        r.fila.getHoraApertura(), r.fila.getHoraCierre()
+                );
+                nueva.setLatitud(r.coords[0]);
+                nueva.setLongitud(r.coords[1]);
+                paradasIngresadas.add(nueva);
+                anadidas++;
+            }
+
+            StringBuilder resumen = new StringBuilder();
+            resumen.append(anadidas).append(" paradas a\u00f1adidas correctamente.");
+            if (!fallidas.isEmpty()) {
+                resumen.append("\n\nNo se pudieron geocodificar (a\u00f1\u00e1delas a mano si hace falta):\n");
+                fallidas.forEach(n -> resumen.append("- ").append(n).append("\n"));
+            }
+            mostrarAlerta(fallidas.isEmpty() ? "\u00c9xito" : "Importaci\u00f3n parcial", resumen.toString());
+        });
+
+        tareaLote.setOnFailed(event -> {
+            dialogoProgreso.close();
+            btnImportarPdf.setDisable(false);
+            mostrarAlerta("Error", "Fallo durante la importaci\u00f3n: " + tareaLote.getException().getMessage());
+        });
+
+        Thread hilo = new Thread(tareaLote);
+        hilo.setDaemon(true);
+        hilo.start();
+
+        dialogoProgreso.show();
     }
 
     private void anadirParada() {
@@ -428,14 +607,6 @@ public class VentanaPrincipal extends Application {
             return;
         }
 
-        String direccionCompleta = calle + ", " + cp + " " + poblacion;
-        double[] coords = geocodificacionService.geocodificar(direccionCompleta);
-
-        if (coords == null) {
-            mostrarAlerta("Error", "No se pudo geocodificar la direcci\u00f3n. Verifica que sea correcta.");
-            return;
-        }
-
         int horaApertura = spinHoraApertura.getValue();
         int minutoApertura = spinMinutoApertura.getValue();
         int horaCierre = spinHoraCierre.getValue();
@@ -448,26 +619,56 @@ public class VentanaPrincipal extends Application {
             return;
         }
 
-        Parada nueva = new Parada(
-                paradasIngresadas.size() + 2,
-                nombre, calle, cp, poblacion,
-                abre, cierra
-        );
-        nueva.setLatitud(coords[0]);
-        nueva.setLongitud(coords[1]);
+        String direccionCompleta = calle + ", " + cp + " " + poblacion;
 
-        paradasIngresadas.add(nueva);
+        btnAnadirParada.setDisable(true);
 
-        txtNombre.clear();
-        txtCalle.clear();
-        txtCodigoPostal.clear();
-        txtPoblacion.clear();
-        spinHoraApertura.getValueFactory().setValue(9);
-        spinMinutoApertura.getValueFactory().setValue(0);
-        spinHoraCierre.getValueFactory().setValue(13);
-        spinMinutoCierre.getValueFactory().setValue(0);
+        Task<double[]> tareaGeocoding = new Task<>() {
+            @Override
+            protected double[] call() {
+                return geocodificacionService.geocodificar(direccionCompleta);
+            }
+        };
 
-        mostrarAlerta("\u00c9xito", "Parada a\u00f1adida: " + nombre);
+        tareaGeocoding.setOnSucceeded(event -> {
+            btnAnadirParada.setDisable(false);
+            double[] coords = tareaGeocoding.getValue();
+
+            if (coords == null) {
+                mostrarAlerta("Error", "No se pudo geocodificar la direcci\u00f3n. Verifica que sea correcta.");
+                return;
+            }
+
+            Parada nueva = new Parada(
+                    paradasIngresadas.size() + 2,
+                    nombre, calle, cp, poblacion,
+                    abre, cierra
+            );
+            nueva.setLatitud(coords[0]);
+            nueva.setLongitud(coords[1]);
+
+            paradasIngresadas.add(nueva);
+
+            txtNombre.clear();
+            txtCalle.clear();
+            txtCodigoPostal.clear();
+            txtPoblacion.clear();
+            spinHoraApertura.getValueFactory().setValue(9);
+            spinMinutoApertura.getValueFactory().setValue(0);
+            spinHoraCierre.getValueFactory().setValue(13);
+            spinMinutoCierre.getValueFactory().setValue(0);
+
+            mostrarAlerta("\u00c9xito", "Parada a\u00f1adida: " + nombre);
+        });
+
+        tareaGeocoding.setOnFailed(event -> {
+            btnAnadirParada.setDisable(false);
+            mostrarAlerta("Error", "Fallo al geocodificar: " + tareaGeocoding.getException().getMessage());
+        });
+
+        Thread hilo = new Thread(tareaGeocoding);
+        hilo.setDaemon(true);
+        hilo.start();
     }
 
     private void calcularRuta() {
@@ -643,6 +844,44 @@ public class VentanaPrincipal extends Application {
     private static String escHtml(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace("\"", "&quot;").replace("\n", " ");
+    }
+
+    /**
+     * Resultado intermedio de geocodificar una FilaImportada: guarda la fila original
+     * junto a sus coordenadas (o null si la geocodificación falló). Se usa para poder
+     * construir el objeto Parada definitivo más tarde, en el hilo de JavaFX, ya que
+     * el "numero" de Parada solo se puede fijar en el constructor.
+     */
+    private static class FilaGeocodificada {
+        final FilaImportada fila;
+        final double[] coords;
+
+        FilaGeocodificada(FilaImportada fila, double[] coords) {
+            this.fila = fila;
+            this.coords = coords;
+        }
+    }
+
+    private Stage crearDialogoProgreso(Task<?> tarea) {
+        Label lbl = new Label();
+        lbl.textProperty().bind(tarea.messageProperty());
+
+        ProgressBar barra = new ProgressBar();
+        barra.progressProperty().bind(tarea.progressProperty());
+        barra.setPrefWidth(300);
+
+        VBox caja = new VBox(12, lbl, barra);
+        caja.setPadding(new Insets(20));
+        caja.setAlignment(Pos.CENTER);
+
+        Stage dialogo = new Stage();
+        dialogo.initOwner(primaryStage);
+        dialogo.initModality(Modality.WINDOW_MODAL);
+        dialogo.initStyle(StageStyle.UTILITY);
+        dialogo.setTitle("Importando paradas...");
+        dialogo.setResizable(false);
+        dialogo.setScene(new Scene(caja, 380, 110));
+        return dialogo;
     }
 
     private void mostrarAlerta(String titulo, String mensaje) {
