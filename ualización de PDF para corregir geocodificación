@@ -1,0 +1,241 @@
+warning: in the working copy of 'src/main/java/com/luispacheco/reparto/ui/VentanaPrincipal.java', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/src/main/java/com/luispacheco/reparto/model/FilaImportada.java b/src/main/java/com/luispacheco/reparto/model/FilaImportada.java[m
+[1mindex f8e383a..28ffecb 100644[m
+[1m--- a/src/main/java/com/luispacheco/reparto/model/FilaImportada.java[m
+[1m+++ b/src/main/java/com/luispacheco/reparto/model/FilaImportada.java[m
+[36m@@ -33,4 +33,12 @@[m [mpublic class FilaImportada {[m
+     public LocalTime getHoraApertura() { return horaApertura; }[m
+     public LocalTime getHoraCierre() { return horaCierre; }[m
+     public boolean isHorarioDetectado() { return horarioDetectado; }[m
+[32m+[m
+[32m+[m[32m    // Setters añadidos para permitir editar la fila en la ventana de[m
+[32m+[m[32m    // previsualización antes de geocodificarla (p.ej. corregir direcciones[m
+[32m+[m[32m    // que Nominatim no reconoce: "LOCAL 10B", tipos de vía duplicados, etc.)[m
+[32m+[m[32m    public void setNombre(String nombre) { this.nombre = nombre; }[m
+[32m+[m[32m    public void setCalle(String calle) { this.calle = calle; }[m
+[32m+[m[32m    public void setCodigoPostal(String codigoPostal) { this.codigoPostal = codigoPostal; }[m
+[32m+[m[32m    public void setPoblacion(String poblacion) { this.poblacion = poblacion; }[m
+ }[m
+\ No newline at end of file[m
+[1mdiff --git a/src/main/java/com/luispacheco/reparto/ui/VentanaPrevisualizacionPdf.java b/src/main/java/com/luispacheco/reparto/ui/VentanaPrevisualizacionPdf.java[m
+[1mindex 22023d1..efb95ad 100644[m
+[1m--- a/src/main/java/com/luispacheco/reparto/ui/VentanaPrevisualizacionPdf.java[m
+[1m+++ b/src/main/java/com/luispacheco/reparto/ui/VentanaPrevisualizacionPdf.java[m
+[36m@@ -6,6 +6,7 @@[m [mimport javafx.geometry.Insets;[m
+ import javafx.scene.Scene;[m
+ import javafx.scene.control.*;[m
+ import javafx.scene.control.cell.CheckBoxTableCell;[m
+[32m+[m[32mimport javafx.scene.control.cell.TextFieldTableCell;[m
+ import javafx.scene.layout.BorderPane;[m
+ import javafx.scene.layout.HBox;[m
+ import javafx.scene.layout.VBox;[m
+[36m@@ -65,21 +66,45 @@[m [mpublic class VentanaPrevisualizacionPdf {[m
+         colNombre.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty([m
+                 data.getValue().fila.getNombre()));[m
+         colNombre.setPrefWidth(160);[m
+[32m+[m[32m        colNombre.setCellFactory(TextFieldTableCell.forTableColumn());[m
+[32m+[m[32m        colNombre.setEditable(true);[m
+[32m+[m[32m        colNombre.setOnEditCommit(event -> {[m
+[32m+[m[32m            event.getRowValue().fila.setNombre(event.getNewValue());[m
+[32m+[m[32m            tabla.refresh();[m
+[32m+[m[32m        });[m
+ [m
+         TableColumn<FilaSeleccionable, String> colCalle = new TableColumn<>("Calle");[m
+         colCalle.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty([m
+                 data.getValue().fila.getCalle()));[m
+         colCalle.setPrefWidth(220);[m
+[32m+[m[32m        colCalle.setCellFactory(TextFieldTableCell.forTableColumn());[m
+[32m+[m[32m        colCalle.setEditable(true);[m
+[32m+[m[32m        colCalle.setOnEditCommit(event -> {[m
+[32m+[m[32m            event.getRowValue().fila.setCalle(event.getNewValue());[m
+[32m+[m[32m            tabla.refresh();[m
+[32m+[m[32m        });[m
+ [m
+         TableColumn<FilaSeleccionable, String> colCP = new TableColumn<>("C.P.");[m
+         colCP.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty([m
+                 data.getValue().fila.getCodigoPostal()));[m
+         colCP.setPrefWidth(60);[m
+[32m+[m[32m        colCP.setCellFactory(TextFieldTableCell.forTableColumn());[m
+[32m+[m[32m        colCP.setEditable(true);[m
+[32m+[m[32m        colCP.setOnEditCommit(event -> {[m
+[32m+[m[32m            event.getRowValue().fila.setCodigoPostal(event.getNewValue());[m
+[32m+[m[32m            tabla.refresh();[m
+[32m+[m[32m        });[m
+ [m
+         TableColumn<FilaSeleccionable, String> colPoblacion = new TableColumn<>("Población");[m
+         colPoblacion.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty([m
+                 data.getValue().fila.getPoblacion()));[m
+         colPoblacion.setPrefWidth(100);[m
+[32m+[m[32m        colPoblacion.setCellFactory(TextFieldTableCell.forTableColumn());[m
+[32m+[m[32m        colPoblacion.setEditable(true);[m
+[32m+[m[32m        colPoblacion.setOnEditCommit(event -> {[m
+[32m+[m[32m            event.getRowValue().fila.setPoblacion(event.getNewValue());[m
+[32m+[m[32m            tabla.refresh();[m
+[32m+[m[32m        });[m
+ [m
+         TableColumn<FilaSeleccionable, String> colHorario = new TableColumn<>("Horario");[m
+         colHorario.setCellValueFactory(data -> {[m
+[36m@@ -118,6 +143,9 @@[m [mpublic class VentanaPrevisualizacionPdf {[m
+         Label leyenda = new Label("\u26a0 Naranja = no se detectó un horario válido en el PDF; se asignó 9:00-20:00 por defecto.");[m
+         leyenda.setStyle("-fx-padding: 0 10 10 10; -fx-text-fill: #7d6608;");[m
+ [m
+[32m+[m[32m        Label leyendaEdicion = new Label("\u270f\ufe0f Doble clic en Nombre, Calle, C.P. o Población para corregir una dirección antes de importar.");[m
+[32m+[m[32m        leyendaEdicion.setStyle("-fx-padding: 0 10 10 10; -fx-text-fill: #566573;");[m
+[32m+[m
+         Button btnSeleccionarTodo = new Button("Seleccionar todo");[m
+         btnSeleccionarTodo.setOnAction(e ->[m
+                 filasSeleccionables.forEach(f -> f.seleccionada.set(true)));[m
+[36m@@ -158,7 +186,7 @@[m [mpublic class VentanaPrevisualizacionPdf {[m
+         HBox botonesFinales = new HBox(10, btnConfirmar, btnCancelar);[m
+         botonesFinales.setPadding(new Insets(10));[m
+ [m
+[31m-        VBox contenedorSuperior = new VBox(titulo, leyenda, botonesSeleccion);[m
+[32m+[m[32m        VBox contenedorSuperior = new VBox(titulo, leyenda, leyendaEdicion, botonesSeleccion);[m
+ [m
+         BorderPane raiz = new BorderPane();[m
+         raiz.setTop(contenedorSuperior);[m
+[1mdiff --git a/src/main/java/com/luispacheco/reparto/ui/VentanaPrincipal.java b/src/main/java/com/luispacheco/reparto/ui/VentanaPrincipal.java[m
+[1mindex bcd6597..59a9bbf 100644[m
+[1m--- a/src/main/java/com/luispacheco/reparto/ui/VentanaPrincipal.java[m
+[1m+++ b/src/main/java/com/luispacheco/reparto/ui/VentanaPrincipal.java[m
+[36m@@ -91,6 +91,10 @@[m [mpublic class VentanaPrincipal extends Application {[m
+     // Última ruta calculada (para el botón Ver en mapa)[m
+     private List<Parada> ultimaRuta;[m
+ [m
+[32m+[m[32m    // Contador que solo incrementa: garantiza números de parada únicos aunque[m
+[32m+[m[32m    // se eliminen paradas de en medio de la lista. El almacén siempre es el 1.[m
+[32m+[m[32m    private int siguienteNumeroParada;[m
+[32m+[m
+     private HttpServer servidorMapa;[m
+     private int puertoMapa;[m
+ [m
+[36m@@ -104,6 +108,7 @@[m [mpublic class VentanaPrincipal extends Application {[m
+         almacenGlobal = null;[m
+         ultimaRuta = new ArrayList<>();[m
+         paradaActualIndex = -1;[m
+[32m+[m[32m        siguienteNumeroParada = 2; // el almacén ocupa el número 1[m
+         iniciarServidorMapa();[m
+ [m
+         VBox panelIzquierdo = crearPanelEntrada();[m
+[36m@@ -179,8 +184,12 @@[m [mpublic class VentanaPrincipal extends Application {[m
+ [m
+         spinHoraInicioRuta = new Spinner<>(0, 23, 8);[m
+         spinHoraInicioRuta.setPrefWidth(55);[m
+[32m+[m[32m        spinHoraInicioRuta.setEditable(true);[m
+[32m+[m[32m        confirmarTextoAlPerderFoco(spinHoraInicioRuta);[m
+         spinMinutoInicioRuta = new Spinner<>(0, 59, 0);[m
+         spinMinutoInicioRuta.setPrefWidth(55);[m
+[32m+[m[32m        spinMinutoInicioRuta.setEditable(true);[m
+[32m+[m[32m        confirmarTextoAlPerderFoco(spinMinutoInicioRuta);[m
+ [m
+         btnCrearAlmacen = new Button("Crear Almac\u00e9n");[m
+         btnCrearAlmacen.setOnAction(e -> crearAlmacen());[m
+[36m@@ -191,7 +200,7 @@[m [mpublic class VentanaPrincipal extends Application {[m
+                 new Label("Calle:"), txtCalleAlmacen,[m
+                 new Label("CP:"), txtCodigoPostalAlmacen,[m
+                 new Label("Pob:"), txtPoblacionAlmacen,[m
+[31m-                new Label("Inicio:"), spinHoraInicioRuta, new Label(":"), spinMinutoInicioRuta,[m
+[32m+[m[32m                new Label("Inicio ruta:"), spinHoraInicioRuta, new Label(":"), spinMinutoInicioRuta,[m
+                 btnCrearAlmacen[m
+         );[m
+         almacenBox.setStyle("-fx-border-bottom: 2px solid #ccc; -fx-padding: 10");[m
+[36m@@ -218,12 +227,20 @@[m [mpublic class VentanaPrincipal extends Application {[m
+ [m
+         spinHoraApertura = new Spinner<>(0, 23, 9);[m
+         spinHoraApertura.setPrefWidth(50);[m
+[32m+[m[32m        spinHoraApertura.setEditable(true);[m
+[32m+[m[32m        confirmarTextoAlPerderFoco(spinHoraApertura);[m
+         spinMinutoApertura = new Spinner<>(0, 59, 0);[m
+         spinMinutoApertura.setPrefWidth(50);[m
+[32m+[m[32m        spinMinutoApertura.setEditable(true);[m
+[32m+[m[32m        confirmarTextoAlPerderFoco(spinMinutoApertura);[m
+         spinHoraCierre = new Spinner<>(0, 23, 13);[m
+         spinHoraCierre.setPrefWidth(50);[m
+[32m+[m[32m        spinHoraCierre.setEditable(true);[m
+[32m+[m[32m        confirmarTextoAlPerderFoco(spinHoraCierre);[m
+         spinMinutoCierre = new Spinner<>(0, 59, 0);[m
+         spinMinutoCierre.setPrefWidth(50);[m
+[32m+[m[32m        spinMinutoCierre.setEditable(true);[m
+[32m+[m[32m        confirmarTextoAlPerderFoco(spinMinutoCierre);[m
+ [m
+         btnAnadirParada = new Button("A\u00f1adir Parada");[m
+         btnAnadirParada.setOnAction(e -> anadirParada());[m
+[36m@@ -430,6 +447,13 @@[m [mpublic class VentanaPrincipal extends Application {[m
+             return;[m
+         }[m
+ [m
+[32m+[m[32m        // El almac\u00e9n no tiene horario propio como restricci\u00f3n: la \u00fanica hora que[m
+[32m+[m[32m        // importa es "Inicio ruta", que sirve de referencia para calcular las horas[m
+[32m+[m[32m        // de llegada al resto de paradas. Por eso aqu\u00ed se le da una ventana abierta[m
+[32m+[m[32m        // todo el d\u00eda, para que nunca bloquee el c\u00e1lculo de la ruta.[m
+[32m+[m[32m        LocalTime aperturaAlmacen = LocalTime.MIN;[m
+[32m+[m[32m        LocalTime cierreAlmacen = LocalTime.of(23, 59);[m
+[32m+[m
+         String direccionCompleta = calle + ", " + cp + " " + poblacion;[m
+ [m
+         btnCrearAlmacen.setDisable(true);[m
+[36m@@ -451,7 +475,7 @@[m [mpublic class VentanaPrincipal extends Application {[m
+             }[m
+ [m
+             almacenGlobal = new Parada(1, nombre, calle, cp, poblacion,[m
+[31m-                    LocalTime.of(8, 0), LocalTime.of(20, 0));[m
+[32m+[m[32m                    aperturaAlmacen, cierreAlmacen);[m
+             almacenGlobal.setLatitud(coords[0]);[m
+             almacenGlobal.setLongitud(coords[1]);[m
+ [m
+[36m@@ -558,7 +582,7 @@[m [mpublic class VentanaPrincipal extends Application {[m
+                     continue;[m
+                 }[m
+                 Parada nueva = new Parada([m
+[31m-                        paradasIngresadas.size() + 2,[m
+[32m+[m[32m                        siguienteNumeroParada++,[m
+                         r.fila.getNombre(), r.fila.getCalle(),[m
+                         r.fila.getCodigoPostal(), r.fila.getPoblacion(),[m
+                         r.fila.getHoraApertura(), r.fila.getHoraCierre()[m
+[36m@@ -640,7 +664,7 @@[m [mpublic class VentanaPrincipal extends Application {[m
+             }[m
+ [m
+             Parada nueva = new Parada([m
+[31m-                    paradasIngresadas.size() + 2,[m
+[32m+[m[32m                    siguienteNumeroParada++,[m
+                     nombre, calle, cp, poblacion,[m
+                     abre, cierra[m
+             );[m
+[36m@@ -846,6 +870,30 @@[m [mpublic class VentanaPrincipal extends Application {[m
+         return s.replace("&", "&amp;").replace("<", "&lt;").replace("\"", "&quot;").replace("\n", " ");[m
+     }[m
+ [m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * JavaFX no aplica automáticamente el texto escrito a mano en un Spinner[m
+[32m+[m[32m     * editable cuando el usuario hace clic fuera de él (solo si pulsa Enter).[m
+[32m+[m[32m     * Este listener fuerza esa confirmación al perder el foco, usando el[m
+[32m+[m[32m     * converter del value factory para parsear el texto actual del editor.[m
+[32m+[m[32m     */[m
+[32m+[m[32m    private static <T> void confirmarTextoAlPerderFoco(Spinner<T> spinner) {[m
+[32m+[m[32m        spinner.focusedProperty().addListener((obs, teniaFoco, tieneFocoAhora) -> {[m
+[32m+[m[32m            if (!tieneFocoAhora) {[m
+[32m+[m[32m                SpinnerValueFactory<T> fabricaValores = spinner.getValueFactory();[m
+[32m+[m[32m                if (fabricaValores != null) {[m
+[32m+[m[32m                    try {[m
+[32m+[m[32m                        T valor = fabricaValores.getConverter().fromString(spinner.getEditor().getText());[m
+[32m+[m[32m                        fabricaValores.setValue(valor);[m
+[32m+[m[32m                    } catch (Exception ex) {[m
+[32m+[m[32m                        // Texto no parseable (p.ej. vacío o letras): se descarta y se[m
+[32m+[m[32m                        // restaura el texto del editor al último valor válido.[m
+[32m+[m[32m                        spinner.getEditor().setText(fabricaValores.getConverter().toString(fabricaValores.getValue()));[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }[m
+[32m+[m[32m        });[m
+[32m+[m[32m    }[m
+[32m+[m
+     /**[m
+      * Resultado intermedio de geocodificar una FilaImportada: guarda la fila original[m
+      * junto a sus coordenadas (o null si la geocodificación falló). Se usa para poder[m
+[36m@@ -895,4 +943,4 @@[m [mpublic class VentanaPrincipal extends Application {[m
+     public static void main(String[] args) {[m
+         launch(args);[m
+     }[m
+[31m-}[m
+[32m+[m[32m}[m
+\ No newline at end of file[m

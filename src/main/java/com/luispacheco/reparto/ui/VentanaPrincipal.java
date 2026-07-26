@@ -91,6 +91,10 @@ public class VentanaPrincipal extends Application {
     // Última ruta calculada (para el botón Ver en mapa)
     private List<Parada> ultimaRuta;
 
+    // Contador que solo incrementa: garantiza números de parada únicos aunque
+    // se eliminen paradas de en medio de la lista. El almacén siempre es el 1.
+    private int siguienteNumeroParada;
+
     private HttpServer servidorMapa;
     private int puertoMapa;
 
@@ -104,6 +108,7 @@ public class VentanaPrincipal extends Application {
         almacenGlobal = null;
         ultimaRuta = new ArrayList<>();
         paradaActualIndex = -1;
+        siguienteNumeroParada = 2; // el almacén ocupa el número 1
         iniciarServidorMapa();
 
         VBox panelIzquierdo = crearPanelEntrada();
@@ -179,8 +184,12 @@ public class VentanaPrincipal extends Application {
 
         spinHoraInicioRuta = new Spinner<>(0, 23, 8);
         spinHoraInicioRuta.setPrefWidth(55);
+        spinHoraInicioRuta.setEditable(true);
+        confirmarTextoAlPerderFoco(spinHoraInicioRuta);
         spinMinutoInicioRuta = new Spinner<>(0, 59, 0);
         spinMinutoInicioRuta.setPrefWidth(55);
+        spinMinutoInicioRuta.setEditable(true);
+        confirmarTextoAlPerderFoco(spinMinutoInicioRuta);
 
         btnCrearAlmacen = new Button("Crear Almac\u00e9n");
         btnCrearAlmacen.setOnAction(e -> crearAlmacen());
@@ -191,7 +200,7 @@ public class VentanaPrincipal extends Application {
                 new Label("Calle:"), txtCalleAlmacen,
                 new Label("CP:"), txtCodigoPostalAlmacen,
                 new Label("Pob:"), txtPoblacionAlmacen,
-                new Label("Inicio:"), spinHoraInicioRuta, new Label(":"), spinMinutoInicioRuta,
+                new Label("Inicio ruta:"), spinHoraInicioRuta, new Label(":"), spinMinutoInicioRuta,
                 btnCrearAlmacen
         );
         almacenBox.setStyle("-fx-border-bottom: 2px solid #ccc; -fx-padding: 10");
@@ -218,12 +227,20 @@ public class VentanaPrincipal extends Application {
 
         spinHoraApertura = new Spinner<>(0, 23, 9);
         spinHoraApertura.setPrefWidth(50);
+        spinHoraApertura.setEditable(true);
+        confirmarTextoAlPerderFoco(spinHoraApertura);
         spinMinutoApertura = new Spinner<>(0, 59, 0);
         spinMinutoApertura.setPrefWidth(50);
+        spinMinutoApertura.setEditable(true);
+        confirmarTextoAlPerderFoco(spinMinutoApertura);
         spinHoraCierre = new Spinner<>(0, 23, 13);
         spinHoraCierre.setPrefWidth(50);
+        spinHoraCierre.setEditable(true);
+        confirmarTextoAlPerderFoco(spinHoraCierre);
         spinMinutoCierre = new Spinner<>(0, 59, 0);
         spinMinutoCierre.setPrefWidth(50);
+        spinMinutoCierre.setEditable(true);
+        confirmarTextoAlPerderFoco(spinMinutoCierre);
 
         btnAnadirParada = new Button("A\u00f1adir Parada");
         btnAnadirParada.setOnAction(e -> anadirParada());
@@ -430,6 +447,13 @@ public class VentanaPrincipal extends Application {
             return;
         }
 
+        // El almac\u00e9n no tiene horario propio como restricci\u00f3n: la \u00fanica hora que
+        // importa es "Inicio ruta", que sirve de referencia para calcular las horas
+        // de llegada al resto de paradas. Por eso aqu\u00ed se le da una ventana abierta
+        // todo el d\u00eda, para que nunca bloquee el c\u00e1lculo de la ruta.
+        LocalTime aperturaAlmacen = LocalTime.MIN;
+        LocalTime cierreAlmacen = LocalTime.of(23, 59);
+
         String direccionCompleta = calle + ", " + cp + " " + poblacion;
 
         btnCrearAlmacen.setDisable(true);
@@ -451,7 +475,7 @@ public class VentanaPrincipal extends Application {
             }
 
             almacenGlobal = new Parada(1, nombre, calle, cp, poblacion,
-                    LocalTime.of(8, 0), LocalTime.of(20, 0));
+                    aperturaAlmacen, cierreAlmacen);
             almacenGlobal.setLatitud(coords[0]);
             almacenGlobal.setLongitud(coords[1]);
 
@@ -558,7 +582,7 @@ public class VentanaPrincipal extends Application {
                     continue;
                 }
                 Parada nueva = new Parada(
-                        paradasIngresadas.size() + 2,
+                        siguienteNumeroParada++,
                         r.fila.getNombre(), r.fila.getCalle(),
                         r.fila.getCodigoPostal(), r.fila.getPoblacion(),
                         r.fila.getHoraApertura(), r.fila.getHoraCierre()
@@ -640,7 +664,7 @@ public class VentanaPrincipal extends Application {
             }
 
             Parada nueva = new Parada(
-                    paradasIngresadas.size() + 2,
+                    siguienteNumeroParada++,
                     nombre, calle, cp, poblacion,
                     abre, cierra
             );
@@ -844,6 +868,30 @@ public class VentanaPrincipal extends Application {
     private static String escHtml(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace("\"", "&quot;").replace("\n", " ");
+    }
+
+    /**
+     * JavaFX no aplica automáticamente el texto escrito a mano en un Spinner
+     * editable cuando el usuario hace clic fuera de él (solo si pulsa Enter).
+     * Este listener fuerza esa confirmación al perder el foco, usando el
+     * converter del value factory para parsear el texto actual del editor.
+     */
+    private static <T> void confirmarTextoAlPerderFoco(Spinner<T> spinner) {
+        spinner.focusedProperty().addListener((obs, teniaFoco, tieneFocoAhora) -> {
+            if (!tieneFocoAhora) {
+                SpinnerValueFactory<T> fabricaValores = spinner.getValueFactory();
+                if (fabricaValores != null) {
+                    try {
+                        T valor = fabricaValores.getConverter().fromString(spinner.getEditor().getText());
+                        fabricaValores.setValue(valor);
+                    } catch (Exception ex) {
+                        // Texto no parseable (p.ej. vacío o letras): se descarta y se
+                        // restaura el texto del editor al último valor válido.
+                        spinner.getEditor().setText(fabricaValores.getConverter().toString(fabricaValores.getValue()));
+                    }
+                }
+            }
+        });
     }
 
     /**

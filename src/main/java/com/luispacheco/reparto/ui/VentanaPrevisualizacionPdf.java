@@ -6,6 +6,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTableCell;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -65,21 +66,45 @@ public class VentanaPrevisualizacionPdf {
         colNombre.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
                 data.getValue().fila.getNombre()));
         colNombre.setPrefWidth(160);
+        colNombre.setCellFactory(TextFieldTableCell.forTableColumn());
+        colNombre.setEditable(true);
+        colNombre.setOnEditCommit(event -> {
+            event.getRowValue().fila.setNombre(event.getNewValue());
+            tabla.refresh();
+        });
 
         TableColumn<FilaSeleccionable, String> colCalle = new TableColumn<>("Calle");
         colCalle.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
                 data.getValue().fila.getCalle()));
         colCalle.setPrefWidth(220);
+        colCalle.setCellFactory(TextFieldTableCell.forTableColumn());
+        colCalle.setEditable(true);
+        colCalle.setOnEditCommit(event -> {
+            event.getRowValue().fila.setCalle(event.getNewValue());
+            tabla.refresh();
+        });
 
         TableColumn<FilaSeleccionable, String> colCP = new TableColumn<>("C.P.");
         colCP.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
                 data.getValue().fila.getCodigoPostal()));
         colCP.setPrefWidth(60);
+        colCP.setCellFactory(TextFieldTableCell.forTableColumn());
+        colCP.setEditable(true);
+        colCP.setOnEditCommit(event -> {
+            event.getRowValue().fila.setCodigoPostal(event.getNewValue());
+            tabla.refresh();
+        });
 
         TableColumn<FilaSeleccionable, String> colPoblacion = new TableColumn<>("Población");
         colPoblacion.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(
                 data.getValue().fila.getPoblacion()));
         colPoblacion.setPrefWidth(100);
+        colPoblacion.setCellFactory(TextFieldTableCell.forTableColumn());
+        colPoblacion.setEditable(true);
+        colPoblacion.setOnEditCommit(event -> {
+            event.getRowValue().fila.setPoblacion(event.getNewValue());
+            tabla.refresh();
+        });
 
         TableColumn<FilaSeleccionable, String> colHorario = new TableColumn<>("Horario");
         colHorario.setCellValueFactory(data -> {
@@ -117,6 +142,9 @@ public class VentanaPrevisualizacionPdf {
 
         Label leyenda = new Label("\u26a0 Naranja = no se detectó un horario válido en el PDF; se asignó 9:00-20:00 por defecto.");
         leyenda.setStyle("-fx-padding: 0 10 10 10; -fx-text-fill: #7d6608;");
+
+        Label leyendaEdicion = new Label("\u270f\ufe0f Doble clic en Nombre, Calle, C.P. o Población para corregir una dirección antes de importar.");
+        leyendaEdicion.setStyle("-fx-padding: 0 10 10 10; -fx-text-fill: #566573;");
 
         Button btnSeleccionarTodo = new Button("Seleccionar todo");
         btnSeleccionarTodo.setOnAction(e ->
@@ -158,7 +186,7 @@ public class VentanaPrevisualizacionPdf {
         HBox botonesFinales = new HBox(10, btnConfirmar, btnCancelar);
         botonesFinales.setPadding(new Insets(10));
 
-        VBox contenedorSuperior = new VBox(titulo, leyenda, botonesSeleccion);
+        VBox contenedorSuperior = new VBox(titulo, leyenda, leyendaEdicion, botonesSeleccion);
 
         BorderPane raiz = new BorderPane();
         raiz.setTop(contenedorSuperior);

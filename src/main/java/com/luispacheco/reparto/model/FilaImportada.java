@@ -33,4 +33,12 @@ public class FilaImportada {
     public LocalTime getHoraApertura() { return horaApertura; }
     public LocalTime getHoraCierre() { return horaCierre; }
     public boolean isHorarioDetectado() { return horarioDetectado; }
+
+    // Setters añadidos para permitir editar la fila en la ventana de
+    // previsualización antes de geocodificarla (p.ej. corregir direcciones
+    // que Nominatim no reconoce: "LOCAL 10B", tipos de vía duplicados, etc.)
+    public void setNombre(String nombre) { this.nombre = nombre; }
+    public void setCalle(String calle) { this.calle = calle; }
+    public void setCodigoPostal(String codigoPostal) { this.codigoPostal = codigoPostal; }
+    public void setPoblacion(String poblacion) { this.poblacion = poblacion; }
 }
