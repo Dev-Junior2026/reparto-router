@@ -34,14 +34,14 @@ Proyecto desarrollado como trabajo final del ciclo de **Desarrollo de Aplicacion
 
 ## Tecnologías utilizadas
 
-| Tecnología | Uso |
-|---|---|
-| **Java 21** | Lenguaje principal |
-| **JavaFX** | Interfaz gráfica de escritorio |
-| **Maven** | Gestión de dependencias y build |
-| **Nominatim (OpenStreetMap)** | Geocodificación de direcciones |
-| **Leaflet.js** | Renderizado de mapas interactivos |
-| **tabula-java** | Extracción de tablas desde archivos PDF |
+| Tecnología                            | Uso                                              |
+| ------------------------------------- | ------------------------------------------------ |
+| **Java 21**                           | Lenguaje principal                               |
+| **JavaFX**                            | Interfaz gráfica de escritorio                   |
+| **Maven**                             | Gestión de dependencias y build                  |
+| **Nominatim (OpenStreetMap)**         | Geocodificación de direcciones                   |
+| **Leaflet.js**                        | Renderizado de mapas interactivos                |
+| **tabula-java**                       | Extracción de tablas desde archivos PDF          |
 | **com.sun.net.httpserver.HttpServer** | Servidor local embebido para servir el mapa HTML |
 
 ---
@@ -85,7 +85,7 @@ mvn clean javafx:run
 
 ## Roadmap / próximos pasos
 
-- [ ] Finalizar la funcionalidad "Ir hacia allí" (apertura de Google Maps con la ubicación actual del usuario vía `navigator.geolocation`).
+- [x] Finalizar la funcionalidad "Ir hacia allí" (apertura de Google Maps con la ubicación actual del usuario vía `navigator.geolocation`).
 - [ ] Extraer la lógica de negocio a un módulo Maven independiente (`reparto-router-core`), agnóstico de plataforma, como paso previo a una futura versión para Android.
 
 ---
